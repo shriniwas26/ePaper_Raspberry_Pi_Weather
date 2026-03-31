@@ -23,6 +23,10 @@ class CurrentWeather:
     weather_label: str
     fetched_at_utc: datetime
 
+    @property
+    def temperature_f(self) -> float:
+        return self.temperature_c * 9.0 / 5.0 + 32.0
+
 
 # WMO Weather interpretation codes (subset for common conditions)
 def _weather_code_label(code: int) -> str:

@@ -154,7 +154,7 @@ def weather_image(
     usable_w = w - 2 * MARGIN
 
     tc = round(weather.temperature_c)
-    tf = round(weather.temperature_c * 9.0 / 5.0 + 32.0)
+    tf = round(weather.temperature_f)
     temp_line = f"{tc}\u00b0C | {tf}\u00b0F"
     for fallback in (44, 42, 38):
         if _text_width(draw, temp_line, font_temp) <= usable_w:

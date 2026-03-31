@@ -15,7 +15,7 @@ MAX_ENTRIES = 5
 def history_entry_from_weather(w: CurrentWeather) -> dict[str, Any]:
     """Rounded values as shown on the panel + ISO fetch time (UTC)."""
     tc = round(w.temperature_c)
-    tf = round(w.temperature_c * 9.0 / 5.0 + 32.0)
+    tf = round(w.temperature_f)
     return {
         "fetched_at_utc": w.fetched_at_utc.isoformat(),
         "temp_c": tc,
