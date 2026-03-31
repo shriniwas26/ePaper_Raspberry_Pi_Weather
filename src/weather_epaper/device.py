@@ -84,11 +84,5 @@ class Epd27Device(DisplayDevice):
         if buffer == self._prev_buffer:
             return
         self._prev_buffer = list(buffer)
-        if not self._base_seeded or not self._v2:
-            if self._v2:
-                epd.display_Base(buffer)
-            else:
-                epd.display(buffer)
-            self._base_seeded = True
-            return
-        epd.display_Partial_Wait(buffer)
+        epd.display(buffer)
+        self._base_seeded = True

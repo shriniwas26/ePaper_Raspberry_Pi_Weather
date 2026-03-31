@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -13,7 +14,6 @@ from weather_epaper.icons import (
 )
 from weather_epaper.weather_client import CurrentWeather
 
-# Landscape: 264x176 (epd2in7 horizontal buffer).
 CANVAS_WIDTH = 264
 CANVAS_HEIGHT = 176
 MARGIN = 8
@@ -21,45 +21,28 @@ BAR_H = 20
 BAR_ICON_PX = 14
 BAR_ICON_BOX = 16
 
-_FONT_CANDIDATES: tuple[tuple[str, int | None], ...] = (
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", None),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", None),
-    ("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", None),
-    ("/System/Library/Fonts/Supplemental/Arial Bold.ttf", None),
-    ("/System/Library/Fonts/Supplemental/Arial.ttf", None),
-    ("/System/Library/Fonts/Helvetica.ttc", 0),
+_FONTS_DIR = Path(__file__).resolve().parent.parent.parent / "fonts"
+
+_FONT_BOLD_CANDIDATES: tuple[str, ...] = (
+    str(_FONTS_DIR / "Roboto-Bold.ttf"),
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",
 )
 
-_FONT_MONO: tuple[tuple[str, int | None], ...] = (
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", None),
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", None),
-    ("/System/Library/Fonts/Supplemental/Menlo.ttc", 0),
-    ("/Library/Fonts/Menlo.ttc", 0),
-)
+BLACK = 0
+WHITE = 255
 
 
 def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path, index in _FONT_CANDIDATES:
+    for path in _FONT_BOLD_CANDIDATES:
         try:
-            if path.endswith(".ttc") and index is not None:
-                return ImageFont.truetype(path, size, index=index)
-            if not path.endswith(".ttc"):
-                return ImageFont.truetype(path, size)
+            if path.endswith(".ttc"):
+                return ImageFont.truetype(path, size, index=0)
+            return ImageFont.truetype(path, size)
         except OSError:
             continue
     return ImageFont.load_default()
-
-
-def _load_mono_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path, index in _FONT_MONO:
-        try:
-            if path.endswith(".ttc") and index is not None:
-                return ImageFont.truetype(path, size, index=index)
-            if not path.endswith(".ttc"):
-                return ImageFont.truetype(path, size)
-        except OSError:
-            continue
-    return _load_font(size)
 
 
 def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
@@ -92,8 +75,8 @@ def _draw_bar_item(
     icon_font: ImageFont.ImageFont,
     label: str,
     text_font: ImageFont.ImageFont,
+    fill: int = BLACK,
 ) -> int:
-    """Draw icon + label centered on BAR_H. Return total width consumed."""
     mid_y = y + BAR_H // 2
 
     ib = icon_font.getbbox(glyph)
@@ -101,13 +84,13 @@ def _draw_bar_item(
     icon_w = ib[2] - ib[0]
     ix = x + (BAR_ICON_BOX - icon_w) // 2 - ib[0]
     iy = mid_y - icon_h // 2 - ib[1]
-    draw.text((ix, iy), glyph, font=icon_font, fill=0)
+    draw.text((ix, iy), glyph, font=icon_font, fill=fill)
 
     tx = x + BAR_ICON_BOX + 3
     tb = draw.textbbox((0, 0), label, font=text_font)
     text_h = tb[3] - tb[1]
     ty = mid_y - text_h // 2
-    draw.text((tx, ty), label, font=text_font, fill=0)
+    draw.text((tx, ty), label, font=text_font, fill=fill)
 
     return BAR_ICON_BOX + 3 + (tb[2] - tb[0])
 
@@ -118,8 +101,8 @@ def _draw_bottom_bar(
     items: list[tuple[str, str]],
     icon_font: ImageFont.ImageFont,
     text_font: ImageFont.ImageFont,
+    fill: int = BLACK,
 ) -> None:
-    """Evenly space metric items across the full canvas width."""
     usable = CANVAS_WIDTH - 2 * MARGIN
 
     item_widths: list[int] = []
@@ -136,7 +119,7 @@ def _draw_bottom_bar(
 
     x = MARGIN
     for (glyph, label), iw in zip(items, item_widths):
-        _draw_bar_item(draw, x, y, glyph, icon_font, label, text_font)
+        _draw_bar_item(draw, x, y, glyph, icon_font, label, text_font, fill=fill)
         x += iw + gap
 
 
@@ -147,7 +130,7 @@ def weather_image(
     display_tz: dt.tzinfo | None = None,
 ) -> Image.Image:
     w, h = CANVAS_WIDTH, CANVAS_HEIGHT
-    image = Image.new("1", (w, h), 255)
+    image = Image.new("1", (w, h), WHITE)
     draw = ImageDraw.Draw(image)
 
     tz = display_tz or weather.fetched_at_utc.astimezone().tzinfo
@@ -155,8 +138,8 @@ def weather_image(
         tz = dt.timezone.utc
 
     font_temp = _load_font(46)
-    font_clock = _load_mono_font(44)
-    font_date = _load_font(16)
+    font_clock = _load_font(56)
+    font_date = _load_font(18)
     font_bar = _load_font(12)
     font_bar_mdi = mdi_font(BAR_ICON_PX)
 
@@ -164,7 +147,7 @@ def weather_image(
 
     tc = round(weather.temperature_c)
     tf = round(weather.temperature_c * 9.0 / 5.0 + 32.0)
-    temp_line = f"{tc}\u00b0C / {tf}\u00b0F"
+    temp_line = f"{tc}\u00b0C | {tf}\u00b0F"
     for fallback in (44, 42, 38):
         if _text_width(draw, temp_line, font_temp) <= usable_w:
             break
@@ -180,25 +163,23 @@ def weather_image(
     clock_h = _text_height(draw, time_s, font_clock)
     date_h = _text_height(draw, date_s, font_date)
 
-    gap_temp_clock = 14
-    gap_clock_date = 8
-    block_h = temp_h + gap_temp_clock + clock_h + gap_clock_date + date_h
-
     bar_y = h - MARGIN - BAR_H
-    space_above_bar = bar_y - MARGIN
-    y_start = MARGIN + max(0, (space_above_bar - block_h) // 3)
+    content_h = temp_h + clock_h + date_h
+    free_space = bar_y - content_h
+    gap = max(6, free_space // 4)
+    gap_clock_date = max(8, free_space - 2 * gap)
 
     def _cx(text: str, font: ImageFont.ImageFont) -> int:
         return MARGIN + (usable_w - _text_width(draw, text, font)) // 2
 
-    y = y_start
-    draw.text((_cx(temp_line, font_temp), y), temp_line, font=font_temp, fill=0)
-    y += temp_h + gap_temp_clock
+    y = 0
+    draw.text((_cx(temp_line, font_temp), y), temp_line, font=font_temp, fill=BLACK)
+    y += temp_h + gap
 
-    draw.text((_cx(time_s, font_clock), y), time_s, font=font_clock, fill=0)
+    draw.text((_cx(time_s, font_clock), y), time_s, font=font_clock, fill=BLACK)
     y += clock_h + gap_clock_date
 
-    draw.text((_cx(date_s, font_date), y), date_s, font=font_date, fill=0)
+    draw.text((_cx(date_s, font_date), y), date_s, font=font_date, fill=BLACK)
 
     bar_items: list[tuple[str, str]] = []
     if weather.apparent_temperature_c is not None:

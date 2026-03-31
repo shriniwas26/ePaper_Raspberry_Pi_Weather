@@ -35,7 +35,7 @@ def _weather_poll_seconds() -> int:
     """Open-Meteo fetch interval (unchanged env: WEATHER_EPAPER_REFRESH_SEC)."""
     if (w := os.environ.get("WEATHER_EPAPER_WEATHER_SEC")) is not None and w != "":
         return int(w)
-    return _env_int("WEATHER_EPAPER_REFRESH_SEC", 1800)
+    return _env_int("WEATHER_EPAPER_REFRESH_SEC", 600)
 
 
 @dataclass(frozen=True)

@@ -30,6 +30,7 @@ sync_dir src
 sync_dir third_party
 sync_dir deploy
 sync_dir scripts
+sync_dir fonts
 sync_file pyproject.toml
 
 if [[ -f "${SRC}/.python-version" ]]; then

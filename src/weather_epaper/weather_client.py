@@ -4,7 +4,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+import logging
+import time
+
 import httpx
+
+log = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -45,7 +50,9 @@ def fetch_current(
     longitude: float,
     *,
     timezone_name: str | None,
-    timeout: float = 30.0,
+    timeout: float = 10.0,
+    retries: int = 3,
+    retry_delay: float = 2.0,
 ) -> CurrentWeather:
     params: dict[str, str] = {
         "latitude": str(latitude),
@@ -66,10 +73,22 @@ def fetch_current(
     else:
         params["timezone"] = "auto"
 
-    with httpx.Client(timeout=timeout) as client:
-        response = client.get(OPEN_METEO_URL, params=params)
-        response.raise_for_status()
-        payload = response.json()
+    last_exc: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            with httpx.Client(timeout=timeout) as client:
+                response = client.get(OPEN_METEO_URL, params=params)
+                response.raise_for_status()
+                payload = response.json()
+            break
+        except (httpx.TimeoutException, httpx.HTTPStatusError) as exc:
+            last_exc = exc
+            if attempt < retries:
+                log.warning("Fetch attempt %d/%d failed: %s – retrying in %.1fs", attempt, retries, exc, retry_delay)
+                time.sleep(retry_delay)
+            else:
+                log.error("All %d fetch attempts failed", retries)
+                raise
 
     current = payload["current"]
     api_tz_name = payload.get("timezone") or "UTC"
