@@ -45,7 +45,7 @@ def _epd_driver_class():
     return EPD
 
 
-FULL_REFRESH_INTERVAL = 15
+FULL_REFRESH_INTERVAL = 900
 
 
 class Epd27Device(DisplayDevice):

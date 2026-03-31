@@ -75,8 +75,8 @@ def run_loop(settings: Settings, args: argparse.Namespace) -> int:
         if args.once:
             break
         now = dt.datetime.now()
-        secs_until_next_min = 60 - now.second
-        time.sleep(secs_until_next_min)
+        sleep_ms = 1.0 - now.microsecond / 1_000_000
+        time.sleep(sleep_ms)
     return 0
 
 

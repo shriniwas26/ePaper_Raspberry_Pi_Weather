@@ -33,9 +33,17 @@ _FONT_BOLD_CANDIDATES: tuple[str, ...] = (
 BLACK = 0
 WHITE = 255
 
+_FONT_REGULAR_CANDIDATES: tuple[str, ...] = (
+    str(_FONTS_DIR / "Roboto-Regular.ttf"),
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",
+)
 
-def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path in _FONT_BOLD_CANDIDATES:
+
+def _load_font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    candidates = _FONT_BOLD_CANDIDATES if bold else _FONT_REGULAR_CANDIDATES
+    for path in candidates:
         try:
             if path.endswith(".ttc"):
                 return ImageFont.truetype(path, size, index=0)
@@ -139,6 +147,7 @@ def weather_image(
 
     font_temp = _load_font(46)
     font_clock = _load_font(56)
+    font_sec = _load_font(32, bold=False)
     font_date = _load_font(18)
     font_bar = _load_font(14)
     font_bar_mdi = mdi_font(BAR_ICON_PX)
@@ -154,14 +163,20 @@ def weather_image(
         font_temp = _load_font(fallback)
 
     now = dt.datetime.now(tz)
-    time_s = now.strftime("%H:%M")
+    hm_s = now.strftime("%H:%M")
+    sec_s = now.strftime(":%S")
+    time_s = hm_s + sec_s
     date_s = now.strftime("%A, %d %b")
     if _text_width(draw, date_s, font_date) > usable_w:
         date_s = now.strftime("%a, %d %b")
 
     temp_h = _text_height(draw, temp_line, font_temp)
-    clock_h = _text_height(draw, time_s, font_clock)
+    clock_h = max(_text_height(draw, hm_s, font_clock), _text_height(draw, sec_s, font_sec))
     date_h = _text_height(draw, date_s, font_date)
+
+    hm_w = _text_width(draw, hm_s, font_clock)
+    sec_w = _text_width(draw, sec_s, font_sec)
+    total_clock_w = hm_w + sec_w
 
     bar_y = h - MARGIN - BAR_H
     content_h = temp_h + clock_h + date_h
@@ -176,7 +191,12 @@ def weather_image(
     draw.text((_cx(temp_line, font_temp), y), temp_line, font=font_temp, fill=BLACK)
     y += temp_h + gap
 
-    draw.text((_cx(time_s, font_clock), y), time_s, font=font_clock, fill=BLACK)
+    clock_x = MARGIN + (usable_w - total_clock_w) // 2
+    draw.text((clock_x, y), hm_s, font=font_clock, fill=BLACK)
+    hm_bb = draw.textbbox((0, 0), hm_s, font=font_clock)
+    sec_bb = draw.textbbox((0, 0), sec_s, font=font_sec)
+    sec_y = y + (hm_bb[3] - hm_bb[1]) - (sec_bb[3] - sec_bb[1])
+    draw.text((clock_x + hm_w, sec_y), sec_s, font=font_sec, fill=BLACK)
     y += clock_h + gap_clock_date
 
     draw.text((_cx(date_s, font_date), y), date_s, font=font_date, fill=BLACK)
