@@ -2,7 +2,7 @@
 name = "weather-epaper"
 version = "0.1.0"
 description = "Weather display for Waveshare 2.7\" e-paper on Raspberry Pi"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "pillow>=10.0.0",
     "httpx>=0.27.0",
@@ -37,3 +37,27 @@ include = ["src/weather_epaper", "third_party/waveshare", "pyproject.toml"]
 dev = [
     "ruff>=0.15.8",
 ]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+src = ["src", "third_party"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",   # line length handled by formatter
+    "SIM108", # ternary operator (readability preference)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["weather_epaper", "waveshare"]
