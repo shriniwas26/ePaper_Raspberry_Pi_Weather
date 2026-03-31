@@ -84,7 +84,7 @@ def fetch_current(
                 response.raise_for_status()
                 payload = response.json()
             break
-        except (httpx.TimeoutException, httpx.HTTPStatusError) as exc:
+        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
             if attempt < retries:
                 logger.warning("Fetch attempt %d/%d failed: %s – retrying in %.1fs", attempt, retries, exc, retry_delay)
                 time.sleep(retry_delay)

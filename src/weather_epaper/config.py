@@ -1,24 +1,35 @@
 from __future__ import annotations
 
 import datetime as dt
+import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+
+logger = logging.getLogger(__name__)
 
 
 def _env_float(name: str, default: float) -> float:
     raw = os.environ.get(name)
     if raw is None or raw == "":
         return default
-    return float(raw)
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning("Invalid float for %s=%r, using default %s", name, raw, default)
+        return default
 
 
 def _env_int(name: str, default: int) -> int:
     raw = os.environ.get(name)
     if raw is None or raw == "":
         return default
-    return int(raw)
+    try:
+        return int(raw)
+    except ValueError:
+        logger.warning("Invalid int for %s=%r, using default %s", name, raw, default)
+        return default
 
 
 def resolve_display_tz(zone_name: str | None) -> dt.tzinfo:
@@ -27,7 +38,7 @@ def resolve_display_tz(zone_name: str | None) -> dt.tzinfo:
         try:
             return ZoneInfo(zone_name)
         except Exception:
-            pass
+            logger.warning("Invalid timezone %r, falling back to system local", zone_name)
     local = datetime.now().astimezone().tzinfo
     return local if local is not None else timezone.utc
 
