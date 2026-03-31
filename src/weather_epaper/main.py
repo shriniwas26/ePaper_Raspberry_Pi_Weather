@@ -12,6 +12,8 @@ from weather_epaper.render import weather_image
 from weather_epaper.weather_history import append_weather_history
 from weather_epaper.weather_client import CurrentWeather, fetch_current
 
+logger = logging.getLogger(__name__)
+
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Weather on Waveshare 2.7\" e-paper")
@@ -57,11 +59,11 @@ def run_loop(settings: Settings, args: argparse.Namespace) -> int:
                 try:
                     append_weather_history(Path(settings.weather_history_path), w)
                 except OSError:
-                    logging.exception("Weather history write failed")
+                    logger.exception("Weather history write failed")
             except Exception:
-                logging.exception("Weather fetch failed")
+                logger.exception("Weather fetch failed")
                 if w is None:
-                    logging.error("No weather data yet; retrying after display interval")
+                    logger.error("No weather data yet; retrying after display interval")
         if w is not None:
             try:
                 img = weather_image(
@@ -70,7 +72,7 @@ def run_loop(settings: Settings, args: argparse.Namespace) -> int:
                 )
                 device.show(img)
             except Exception:
-                logging.exception("Display update failed")
+                logger.exception("Display update failed")
         if args.once:
             break
         now = dt.datetime.now()

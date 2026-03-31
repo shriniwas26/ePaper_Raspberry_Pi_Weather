@@ -9,7 +9,7 @@ import time
 
 import httpx
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -82,10 +82,10 @@ def fetch_current(
             break
         except (httpx.TimeoutException, httpx.HTTPStatusError) as exc:
             if attempt < retries:
-                log.warning("Fetch attempt %d/%d failed: %s – retrying in %.1fs", attempt, retries, exc, retry_delay)
+                logger.warning("Fetch attempt %d/%d failed: %s – retrying in %.1fs", attempt, retries, exc, retry_delay)
                 time.sleep(retry_delay)
             else:
-                log.error("All %d fetch attempts failed", retries)
+                logger.error("All %d fetch attempts failed", retries)
                 raise
 
     current = payload["current"]
