@@ -18,8 +18,6 @@ Environment=GPIOZERO_PIN_FACTORY=lgpio
 # Environment=WEATHER_EPAPER_TZ=Europe/Amsterdam
 # WEATHER_EPAPER_REFRESH_SEC = Open-Meteo poll interval (default 1800).
 # WEATHER_EPAPER_HISTORY_JSON = rounded weather snapshots, newest first, max 5 (default data/weather_history.json).
-# WEATHER_EPAPER_DISPLAY_SEC = e-paper redraw / clock tick (default 5; frequent refresh wears the panel).
-# Environment=WEATHER_EPAPER_DISPLAY_SEC=5
 # Environment=WEATHER_EPAPER_REFRESH_SEC=1800
 ExecStart=/home/pi/ePaper_Raspi/scripts/run-service.sh
 Restart=on-failure

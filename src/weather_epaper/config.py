@@ -38,11 +38,6 @@ def _weather_poll_seconds() -> int:
     return _env_int("WEATHER_EPAPER_REFRESH_SEC", 1800)
 
 
-def _display_poll_seconds() -> int:
-    """How often to redraw the e-paper (clock uses wall time; weather reuses cache). Default 5s."""
-    return _env_int("WEATHER_EPAPER_DISPLAY_SEC", 5)
-
-
 @dataclass(frozen=True)
 class Settings:
     latitude: float
@@ -50,7 +45,6 @@ class Settings:
     timezone: str | None
     location_label: str
     weather_refresh_seconds: int
-    display_refresh_seconds: int
     mock_output_path: str
     weather_history_path: str
     mock: bool
@@ -65,7 +59,6 @@ class Settings:
             timezone=tz_opt,
             location_label=os.environ.get("WEATHER_EPAPER_LABEL", "Eindhoven"),
             weather_refresh_seconds=max(1, _weather_poll_seconds()),
-            display_refresh_seconds=max(1, _display_poll_seconds()),
             mock_output_path=os.environ.get("WEATHER_EPAPER_MOCK_OUTPUT", "out/preview.png"),
             weather_history_path=os.environ.get(
                 "WEATHER_EPAPER_HISTORY_JSON",

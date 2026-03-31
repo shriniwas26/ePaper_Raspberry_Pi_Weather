@@ -38,4 +38,4 @@ else
 	echo "deploy: skip .python-version (not in repo tree)"
 fi
 
-echo "deploy: rsync steps finished (uv.lock not copied)"
+echo "deploy: rsync steps finished (uv.lock not copied; resolved on device)"
