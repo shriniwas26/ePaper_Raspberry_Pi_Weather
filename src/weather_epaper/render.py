@@ -16,23 +16,10 @@ from weather_epaper.weather_client import CurrentWeather
 # Landscape: 264x176 (epd2in7 horizontal buffer).
 CANVAS_WIDTH = 264
 CANVAS_HEIGHT = 176
-SPLIT_X = 156
-MARGIN = 5
-ICON_BOX = 20
-ICON_MDI_PX = 19
-ROW_H = 24
-
-def _right_panel_fonts() -> tuple[
-    ImageFont.FreeTypeFont | ImageFont.ImageFont,
-    ImageFont.FreeTypeFont | ImageFont.ImageFont,
-    ImageFont.FreeTypeFont | ImageFont.ImageFont,
-]:
-    return (
-        _load_font(16),
-        _load_font(14),
-        _load_mono_font(32),
-    )
-
+MARGIN = 8
+BAR_H = 20
+BAR_ICON_PX = 14
+BAR_ICON_BOX = 16
 
 _FONT_CANDIDATES: tuple[tuple[str, int | None], ...] = (
     ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", None),
@@ -85,124 +72,72 @@ def _text_height(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont
     return b[3] - b[1]
 
 
-def _truncate_to_width(
-    draw: ImageDraw.ImageDraw,
-    text: str,
-    font: ImageFont.ImageFont,
-    max_w: int,
-) -> str:
-    if _text_width(draw, text, font) <= max_w:
-        return text
-    ell = "..."
-    while len(text) > 1:
-        text = text[:-1]
-        candidate = text + ell
-        if _text_width(draw, candidate, font) <= max_w:
-            return candidate
-    return ell
-
-
 def _weather_age_label(fetched_at_utc: dt.datetime) -> str:
     now = dt.datetime.now(dt.timezone.utc)
     ft = fetched_at_utc.astimezone(dt.timezone.utc)
     secs = int(max(0, (now - ft).total_seconds()))
     if secs < 45:
-        return "just now"
+        return "now"
     mins = (secs + 30) // 60
     if mins == 1:
-        return "1 minute"
-    return f"{mins} minutes"
+        return "1 min"
+    return f"{mins} min"
 
 
-def _draw_mdi_in_box(
+def _draw_bar_item(
     draw: ImageDraw.ImageDraw,
     x: int,
     y: int,
     glyph: str,
-    font: ImageFont.ImageFont,
-    box: int = ICON_BOX,
-) -> None:
-    bbox = font.getbbox(glyph)
-    gw = bbox[2] - bbox[0]
-    gh = bbox[3] - bbox[1]
-    tx = x + (box - gw) // 2 - bbox[0]
-    ty = y + (box - gh) // 2 - bbox[1]
-    draw.text((tx, ty), glyph, font=font, fill=0)
-
-
-def _draw_metric_row(
-    draw: ImageDraw.ImageDraw,
-    x_icon: int,
-    y: int,
-    glyph: str,
     icon_font: ImageFont.ImageFont,
     label: str,
-    font: ImageFont.ImageFont,
-) -> None:
-    mid_y = y + ROW_H // 2
-    tb = draw.textbbox((0, 0), label, font=font)
-    text_h = tb[3] - tb[1]
-    ty = mid_y - text_h // 2
+    text_font: ImageFont.ImageFont,
+) -> int:
+    """Draw icon + label centered on BAR_H. Return total width consumed."""
+    mid_y = y + BAR_H // 2
 
     ib = icon_font.getbbox(glyph)
     icon_h = ib[3] - ib[1]
     icon_w = ib[2] - ib[0]
-    ix = x_icon + (ICON_BOX - icon_w) // 2 - ib[0]
+    ix = x + (BAR_ICON_BOX - icon_w) // 2 - ib[0]
     iy = mid_y - icon_h // 2 - ib[1]
     draw.text((ix, iy), glyph, font=icon_font, fill=0)
 
-    tx = x_icon + ICON_BOX + 4
-    draw.text((tx, ty), label, font=font, fill=0)
+    tx = x + BAR_ICON_BOX + 3
+    tb = draw.textbbox((0, 0), label, font=text_font)
+    text_h = tb[3] - tb[1]
+    ty = mid_y - text_h // 2
+    draw.text((tx, ty), label, font=text_font, fill=0)
+
+    return BAR_ICON_BOX + 3 + (tb[2] - tb[0])
 
 
-def _draw_right_panel(
+def _draw_bottom_bar(
     draw: ImageDraw.ImageDraw,
-    *,
-    split_x: int,
-    canvas_w: int,
-    canvas_h: int,
-    display_tz: dt.tzinfo,
-    location_label: str,
-    font_location: ImageFont.ImageFont,
-    font_weekday: ImageFont.ImageFont,
-    font_date: ImageFont.ImageFont,
-    font_time: ImageFont.ImageFont,
+    y: int,
+    items: list[tuple[str, str]],
+    icon_font: ImageFont.ImageFont,
+    text_font: ImageFont.ImageFont,
 ) -> None:
-    now = dt.datetime.now(display_tz)
-    weekday = now.strftime("%A")
-    date_s = now.strftime("%d %b")
-    time_s = now.strftime("%H:%M")
+    """Evenly space metric items across the full canvas width."""
+    usable = CANVAS_WIDTH - 2 * MARGIN
 
-    x0 = split_x + MARGIN
-    x1 = canvas_w - MARGIN
-    y0 = MARGIN
-    y1 = canvas_h - MARGIN
-    inner_w = x1 - x0
-    inner_h = y1 - y0
+    item_widths: list[int] = []
+    for glyph, label in items:
+        tb = draw.textbbox((0, 0), label, font=text_font)
+        item_widths.append(BAR_ICON_BOX + 3 + (tb[2] - tb[0]))
 
-    location = _truncate_to_width(draw, location_label, font_location, inner_w)
-    if _text_width(draw, weekday, font_weekday) > inner_w:
-        weekday = now.strftime("%a")
+    total_items_w = sum(item_widths)
+    n = len(items)
+    if n > 1 and total_items_w < usable:
+        gap = (usable - total_items_w) // (n - 1)
+    else:
+        gap = 6
 
-    loc_h = _text_height(draw, location, font_location)
-    d_h = _text_height(draw, weekday, font_weekday)
-    dt_h = _text_height(draw, date_s, font_date)
-    tm_h = _text_height(draw, time_s, font_time)
-    gap = 3
-    gap2 = 5
-    block_h = loc_h + gap + d_h + gap + dt_h + gap2 + tm_h
-    y_c = y0 + max(0, (inner_h - block_h) // 2)
-
-    def _cx(text: str, font: ImageFont.ImageFont) -> int:
-        return x0 + (inner_w - _text_width(draw, text, font)) // 2
-
-    draw.text((_cx(location, font_location), y_c), location, font=font_location, fill=0)
-    y_c += loc_h + gap
-    draw.text((_cx(weekday, font_weekday), y_c), weekday, font=font_weekday, fill=0)
-    y_c += d_h + gap
-    draw.text((_cx(date_s, font_date), y_c), date_s, font=font_date, fill=0)
-    y_c += dt_h + gap2
-    draw.text((_cx(time_s, font_time), y_c), time_s, font=font_time, fill=0)
+    x = MARGIN
+    for (glyph, label), iw in zip(items, item_widths):
+        _draw_bar_item(draw, x, y, glyph, icon_font, label, text_font)
+        x += iw + gap
 
 
 def weather_image(
@@ -215,71 +150,67 @@ def weather_image(
     image = Image.new("1", (w, h), 255)
     draw = ImageDraw.Draw(image)
 
-    font_temp = _load_font(28)
-    font_cond = _load_font(16)
-    font_metric = _load_font(14)
-    font_ago = _load_font(12)
-    font_mdi = mdi_font(ICON_MDI_PX)
-    font_weekday, font_rdate, font_rtime = _right_panel_fonts()
+    tz = display_tz or weather.fetched_at_utc.astimezone().tzinfo
+    if tz is None:
+        tz = dt.timezone.utc
 
-    lx = MARGIN
-    left_max = SPLIT_X - 2 * MARGIN
-    y = MARGIN
+    font_temp = _load_font(46)
+    font_clock = _load_mono_font(44)
+    font_date = _load_font(16)
+    font_bar = _load_font(12)
+    font_bar_mdi = mdi_font(BAR_ICON_PX)
+
+    usable_w = w - 2 * MARGIN
 
     tc = round(weather.temperature_c)
     tf = round(weather.temperature_c * 9.0 / 5.0 + 32.0)
     temp_line = f"{tc}\u00b0C / {tf}\u00b0F"
-    for fallback in (26, 24):
-        if _text_width(draw, temp_line, font_temp) <= left_max:
+    for fallback in (44, 42, 38):
+        if _text_width(draw, temp_line, font_temp) <= usable_w:
             break
         font_temp = _load_font(fallback)
-    draw.text((lx, y), temp_line, font=font_temp, fill=0)
-    y += _text_height(draw, temp_line, font_temp) + 10
 
-    cond = _truncate_to_width(draw, weather.weather_label, font_cond, left_max)
-    draw.text((lx, y), cond, font=font_cond, fill=0)
-    y += _text_height(draw, cond, font_cond) + 8
+    now = dt.datetime.now(tz)
+    time_s = now.strftime("%H:%M")
+    date_s = now.strftime("%A, %d %b")
+    if _text_width(draw, date_s, font_date) > usable_w:
+        date_s = now.strftime("%a, %d %b")
 
+    temp_h = _text_height(draw, temp_line, font_temp)
+    clock_h = _text_height(draw, time_s, font_clock)
+    date_h = _text_height(draw, date_s, font_date)
+
+    gap_temp_clock = 14
+    gap_clock_date = 8
+    block_h = temp_h + gap_temp_clock + clock_h + gap_clock_date + date_h
+
+    bar_y = h - MARGIN - BAR_H
+    space_above_bar = bar_y - MARGIN
+    y_start = MARGIN + max(0, (space_above_bar - block_h) // 3)
+
+    def _cx(text: str, font: ImageFont.ImageFont) -> int:
+        return MARGIN + (usable_w - _text_width(draw, text, font)) // 2
+
+    y = y_start
+    draw.text((_cx(temp_line, font_temp), y), temp_line, font=font_temp, fill=0)
+    y += temp_h + gap_temp_clock
+
+    draw.text((_cx(time_s, font_clock), y), time_s, font=font_clock, fill=0)
+    y += clock_h + gap_clock_date
+
+    draw.text((_cx(date_s, font_date), y), date_s, font=font_date, fill=0)
+
+    bar_items: list[tuple[str, str]] = []
     if weather.apparent_temperature_c is not None:
         fc = round(weather.apparent_temperature_c)
         ff = round(weather.apparent_temperature_c * 9.0 / 5.0 + 32.0)
-        _draw_metric_row(
-            draw, lx, y, GLYPH_THERMOMETER, font_mdi,
-            f"{fc}\u00b0C / {ff}\u00b0F", font_metric,
-        )
-        y += ROW_H
+        bar_items.append((GLYPH_THERMOMETER, f"{fc}\u00b0/{ff}\u00b0"))
     if weather.relative_humidity_pct is not None:
-        _draw_metric_row(
-            draw, lx, y, GLYPH_WATER, font_mdi,
-            f"{weather.relative_humidity_pct}%", font_metric,
-        )
-        y += ROW_H
+        bar_items.append((GLYPH_WATER, f"{weather.relative_humidity_pct}%"))
     if weather.wind_speed_kmh is not None:
-        wk = round(weather.wind_speed_kmh)
-        _draw_metric_row(
-            draw, lx, y, GLYPH_WIND, font_mdi,
-            f"{wk} km/h", font_metric,
-        )
-        y += ROW_H
+        bar_items.append((GLYPH_WIND, f"{round(weather.wind_speed_kmh)} km/h"))
+    bar_items.append((GLYPH_REFRESH, _weather_age_label(weather.fetched_at_utc)))
 
-    ago_s = _weather_age_label(weather.fetched_at_utc)
-    _draw_metric_row(draw, lx, y, GLYPH_REFRESH, font_mdi, ago_s, font_ago)
-
-    tz = display_tz or weather.fetched_at_utc.astimezone().tzinfo
-    if tz is None:
-        tz = dt.timezone.utc
-    font_loc = _load_font(11)
-    _draw_right_panel(
-        draw,
-        split_x=SPLIT_X,
-        canvas_w=w,
-        canvas_h=h,
-        display_tz=tz,
-        location_label=(location_label or "").strip(),
-        font_location=font_loc,
-        font_weekday=font_weekday,
-        font_date=font_rdate,
-        font_time=font_rtime,
-    )
+    _draw_bottom_bar(draw, bar_y, bar_items, font_bar_mdi, font_bar)
 
     return image
