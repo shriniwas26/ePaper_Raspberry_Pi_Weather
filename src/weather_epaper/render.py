@@ -18,9 +18,9 @@ CANVAS_WIDTH = 264
 CANVAS_HEIGHT = 176
 SPLIT_X = CANVAS_WIDTH // 2
 HEADER_H = 0
-ICON_BOX = 16
-ICON_MDI_PX = 15  # Material Design Icons in the 16px cell
-ROW_H = 22
+ICON_BOX = 20
+ICON_MDI_PX = 19
+ROW_H = 24
 LEFT_PAD = 8
 RIGHT_PAD = 6
 
@@ -30,9 +30,9 @@ def _right_panel_fonts() -> tuple[
     ImageFont.FreeTypeFont | ImageFont.ImageFont,
 ]:
     return (
-        _load_font(14),
-        _load_font(13),
-        _load_mono_font(36),
+        _load_font(20),
+        _load_font(18),
+        _load_mono_font(42),
     )
 
 
@@ -141,10 +141,19 @@ def _draw_metric_row(
     label: str,
     font: ImageFont.ImageFont,
 ) -> None:
-    iy = y + max(0, (ROW_H - ICON_BOX) // 2)
-    _draw_mdi_in_box(draw, x_icon, iy, glyph, icon_font)
+    mid_y = y + ROW_H // 2
+    tb = draw.textbbox((0, 0), label, font=font)
+    text_h = tb[3] - tb[1]
+    ty = mid_y - text_h // 2
+
+    ib = icon_font.getbbox(glyph)
+    icon_h = ib[3] - ib[1]
+    icon_w = ib[2] - ib[0]
+    ix = x_icon + (ICON_BOX - icon_w) // 2 - ib[0]
+    iy = mid_y - icon_h // 2 - ib[1]
+    draw.text((ix, iy), glyph, font=icon_font, fill=0)
+
     tx = x_icon + ICON_BOX + 5
-    ty = y + (ROW_H - _text_height(draw, label, font)) // 2
     draw.text((tx, ty), label, font=font, fill=0)
 
 
@@ -155,6 +164,8 @@ def _draw_right_panel(
     canvas_w: int,
     canvas_h: int,
     display_tz: dt.tzinfo,
+    location_label: str,
+    font_location: ImageFont.ImageFont,
     font_weekday: ImageFont.ImageFont,
     font_date: ImageFont.ImageFont,
     font_time: ImageFont.ImageFont,
@@ -172,17 +183,21 @@ def _draw_right_panel(
     inner_h = inner_y1 - inner_y0
 
     rw = inner_w - 8
+    location = _truncate_to_width(draw, location_label, font_location, rw)
     if _text_width(draw, weekday, font_weekday) > rw:
         weekday = now.strftime("%a")
 
+    loc_h = _text_height(draw, location, font_location)
     d_h = _text_height(draw, weekday, font_weekday)
     dt_h = _text_height(draw, date_s, font_date)
     tm_h = _text_height(draw, time_s, font_time)
     gap = 4
     gap2 = 6
-    block_h = d_h + gap + dt_h + gap2 + tm_h
+    block_h = loc_h + gap + d_h + gap + dt_h + gap2 + tm_h
     y_c = inner_y0 + max(0, (inner_h - block_h) // 2)
 
+    draw.text((inner_x0 + (inner_w - _text_width(draw, location, font_location)) // 2, y_c), location, font=font_location, fill=0)
+    y_c += loc_h + gap
     draw.text((inner_x0 + (inner_w - _text_width(draw, weekday, font_weekday)) // 2, y_c), weekday, font=font_weekday, fill=0)
     y_c += d_h + gap
     draw.text((inner_x0 + (inner_w - _text_width(draw, date_s, font_date)) // 2, y_c), date_s, font=font_date, fill=0)
@@ -200,20 +215,18 @@ def weather_image(
     image = Image.new("1", (w, h), 255)
     draw = ImageDraw.Draw(image)
 
-    font_hero = _load_font(34)
-    font_cond = _load_font(14)
-    font_metric = _load_font(12)
+    font_hero = _load_font(38)
+    font_cond = _load_font(16)
+    font_metric = _load_font(16)
     font_weekday, font_rdate, font_rtime = _right_panel_fonts()
-    font_ago = _load_font(10)
+    font_ago = _load_font(14)
     font_mdi = mdi_font(ICON_MDI_PX)
-
-    draw.line((SPLIT_X, 0, SPLIT_X, h - 1), fill=0, width=1)
 
     left_max = SPLIT_X - LEFT_PAD - 4
     y = LEFT_PAD
     tc = round(weather.temperature_c)
     tf = round(weather.temperature_c * 9.0 / 5.0 + 32.0)
-    temp_line = f"{tc}C / {tf} F"
+    temp_line = f"{tc}\u00b0C / {tf}\u00b0F"
     font_temp = font_hero
     if _text_width(draw, temp_line, font_temp) > left_max:
         font_temp = _load_font(26)
@@ -227,6 +240,19 @@ def weather_image(
     draw.text((LEFT_PAD, y), cond, font=font_cond, fill=0)
     y += _text_height(draw, cond, font_cond) + 6
 
+    if weather.apparent_temperature_c is not None:
+        fc = round(weather.apparent_temperature_c)
+        ff = round(weather.apparent_temperature_c * 9.0 / 5.0 + 32.0)
+        _draw_metric_row(
+            draw,
+            LEFT_PAD,
+            y,
+            GLYPH_THERMOMETER,
+            font_mdi,
+            f"{fc}\u00b0C / {ff}\u00b0F",
+            font_metric,
+        )
+        y += ROW_H
     if weather.relative_humidity_pct is not None:
         _draw_metric_row(
             draw,
@@ -238,17 +264,6 @@ def weather_image(
             font_metric,
         )
         y += ROW_H
-    if weather.apparent_temperature_c is not None:
-        _draw_metric_row(
-            draw,
-            LEFT_PAD,
-            y,
-            GLYPH_THERMOMETER,
-            font_mdi,
-            f"{weather.apparent_temperature_c:.0f} C feels",
-            font_metric,
-        )
-        y += ROW_H
     if weather.wind_speed_kmh is not None:
         wk = round(weather.wind_speed_kmh)
         _draw_metric_row(
@@ -257,7 +272,7 @@ def weather_image(
             y,
             GLYPH_WIND,
             font_mdi,
-            f"{wk} km/h wind",
+            f"{wk} km/h",
             font_metric,
         )
         y += ROW_H
@@ -276,12 +291,15 @@ def weather_image(
     tz = display_tz or weather.fetched_at_utc.astimezone().tzinfo
     if tz is None:
         tz = dt.timezone.utc
+    font_loc = _load_font(12)
     _draw_right_panel(
         draw,
         split_x=SPLIT_X,
         canvas_w=w,
         canvas_h=h,
         display_tz=tz,
+        location_label=(location_label or "").strip(),
+        font_location=font_loc,
         font_weekday=font_weekday,
         font_date=font_rdate,
         font_time=font_rtime,

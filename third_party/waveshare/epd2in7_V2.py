@@ -441,6 +441,28 @@ class EPD:
                 if((j > Ystart-1) & (j < (Yend + 1)) & (i > Xstart-1) & (i < (Xend + 1))):
                     self.send_data(Image[i + j * Width])
         self.TurnOnDisplay_Partial()
+
+    def display_Partial_Wait(self, image):
+        """Write full buffer to new-image RAM and do a partial-waveform update.
+
+        The SSD1680 diffs 0x24 (new) against 0x26 (old) and only drives pixels
+        that changed.  Call display_Base() once first to seed both banks.
+        No hardware reset, no window math -- just write and refresh.
+        """
+        if(self.width % 8 == 0):
+            Width = self.width // 8
+        else:
+            Width = self.width // 8 +1
+        Height = self.height
+
+        self.send_command(0x3C) #BorderWavefrom
+        self.send_data(0x80)
+
+        self.send_command(0x24)   #Write Black and White image to RAM
+        for j in range(Height):
+            for i in range(Width):
+                self.send_data(image[i + j * Width])
+        self.TurnOnDisplay_Partial()
   
     def display_4Gray(self, image):
         self.send_command(0x24)

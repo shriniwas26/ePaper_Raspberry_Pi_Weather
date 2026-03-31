@@ -27,10 +27,14 @@ class MockDevice(DisplayDevice):
         logger.info("Wrote mock preview to %s", self._output_path)
 
 
+def _is_v2() -> bool:
+    variant = os.environ.get("WEATHER_EPAPER_EPD", "v2").strip().lower()
+    return variant not in ("v1", "1", "legacy", "old")
+
+
 def _epd_driver_class():
     """V2 SSD1680 protocol is used on current 2.7\" B/W HATs; V1 is older stock."""
-    variant = os.environ.get("WEATHER_EPAPER_EPD", "v2").strip().lower()
-    if variant in ("v1", "1", "legacy", "old"):
+    if not _is_v2():
         from waveshare.epd2in7 import EPD
 
         logger.info("e-Paper driver: epd2in7 (legacy V1)")
@@ -47,8 +51,10 @@ class Epd27Device(DisplayDevice):
     def __init__(self) -> None:
         os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
         self._EPD = _epd_driver_class()
+        self._v2 = _is_v2()
         self._epd: object | None = None
         self._prev_buffer: list | None = None
+        self._base_seeded = False
         atexit.register(self._shutdown_epd)
 
     def _ensure_epd(self) -> object:
@@ -69,6 +75,8 @@ class Epd27Device(DisplayDevice):
             logger.exception("e-Paper sleep failed on shutdown")
         finally:
             self._epd = None
+            self._base_seeded = False
+            self._prev_buffer = None
 
     def show(self, image: Image.Image) -> None:
         epd = self._ensure_epd()
@@ -76,4 +84,11 @@ class Epd27Device(DisplayDevice):
         if buffer == self._prev_buffer:
             return
         self._prev_buffer = list(buffer)
-        epd.display(buffer)
+        if not self._base_seeded or not self._v2:
+            if self._v2:
+                epd.display_Base(buffer)
+            else:
+                epd.display(buffer)
+            self._base_seeded = True
+            return
+        epd.display_Partial_Wait(buffer)
