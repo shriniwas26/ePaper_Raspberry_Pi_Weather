@@ -22,9 +22,7 @@ def history_entry_from_weather(w: CurrentWeather) -> dict[str, Any]:
         "temp_f": tf,
         "weather_label": w.weather_label,
         "humidity_pct": w.relative_humidity_pct,
-        "feels_c": (
-            None if w.apparent_temperature_c is None else round(w.apparent_temperature_c)
-        ),
+        "feels_c": (None if w.apparent_temperature_c is None else round(w.apparent_temperature_c)),
         "wind_kmh": None if w.wind_speed_kmh is None else round(w.wind_speed_kmh),
     }
 
@@ -35,7 +33,7 @@ def load_weather_history(path: Path) -> list[dict[str, Any]]:
         return []
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except OSError, json.JSONDecodeError:
         logger.warning("Could not read weather history at %s", path)
         return []
     if not isinstance(raw, dict):

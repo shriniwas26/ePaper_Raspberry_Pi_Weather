@@ -14,6 +14,8 @@ from weather_epaper.icons import (
 )
 from weather_epaper.weather_client import CurrentWeather
 
+Font = ImageFont.FreeTypeFont | ImageFont.ImageFont
+
 CANVAS_WIDTH = 264
 CANVAS_HEIGHT = 176
 MARGIN = 8
@@ -41,7 +43,7 @@ _FONT_REGULAR_CANDIDATES: tuple[str, ...] = (
 )
 
 
-def _load_font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def _load_font(size: int, bold: bool = True) -> Font:
     candidates = _FONT_BOLD_CANDIDATES if bold else _FONT_REGULAR_CANDIDATES
     for path in candidates:
         try:
@@ -53,14 +55,14 @@ def _load_font(size: int, bold: bool = True) -> ImageFont.FreeTypeFont | ImageFo
     return ImageFont.load_default()
 
 
-def _text_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+def _text_width(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
     b = draw.textbbox((0, 0), text, font=font)
-    return b[2] - b[0]
+    return int(b[2] - b[0])
 
 
-def _text_height(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
+def _text_height(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
     b = draw.textbbox((0, 0), text, font=font)
-    return b[3] - b[1]
+    return int(b[3] - b[1])
 
 
 def _weather_age_label(fetched_at_utc: dt.datetime) -> str:
@@ -80,9 +82,9 @@ def _draw_bar_item(
     x: int,
     y: int,
     glyph: str,
-    icon_font: ImageFont.ImageFont,
+    icon_font: Font,
     label: str,
-    text_font: ImageFont.ImageFont,
+    text_font: Font,
     fill: int = BLACK,
 ) -> int:
     mid_y = y + BAR_H // 2
@@ -100,15 +102,15 @@ def _draw_bar_item(
     ty = mid_y - text_h // 2 - tb[1]
     draw.text((tx, ty), label, font=text_font, fill=fill)
 
-    return BAR_ICON_BOX + 3 + (tb[2] - tb[0])
+    return int(BAR_ICON_BOX + 3 + (tb[2] - tb[0]))
 
 
 def _draw_bottom_bar(
     draw: ImageDraw.ImageDraw,
     y: int,
     items: list[tuple[str, str]],
-    icon_font: ImageFont.ImageFont,
-    text_font: ImageFont.ImageFont,
+    icon_font: Font,
+    text_font: Font,
     fill: int = BLACK,
 ) -> None:
     usable = CANVAS_WIDTH - 2 * MARGIN
@@ -116,7 +118,7 @@ def _draw_bottom_bar(
     item_widths: list[int] = []
     for _glyph, label in items:
         tb = draw.textbbox((0, 0), label, font=text_font)
-        item_widths.append(BAR_ICON_BOX + 3 + (tb[2] - tb[0]))
+        item_widths.append(int(BAR_ICON_BOX + 3 + (tb[2] - tb[0])))
 
     total_items_w = sum(item_widths)
     n = len(items)
@@ -182,7 +184,7 @@ def weather_image(
     gap = max(6, free_space // 4)
     gap_clock_date = max(8, free_space - 2 * gap)
 
-    def _cx(text: str, font: ImageFont.ImageFont) -> int:
+    def _cx(text: str, font: Font) -> int:
         return MARGIN + (usable_w - _text_width(draw, text, font)) // 2
 
     y = 0

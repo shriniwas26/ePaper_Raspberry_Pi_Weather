@@ -5,6 +5,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 
@@ -32,17 +33,17 @@ def _is_v2() -> bool:
     return variant not in ("v1", "1", "legacy", "old")
 
 
-def _epd_driver_class() -> type:
+def _epd_driver_class() -> type[Any]:
     """V2 SSD1680 protocol is used on current 2.7\" B/W HATs; V1 is older stock."""
     if not _is_v2():
         from waveshare.epd2in7 import EPD
 
         logger.info("e-Paper driver: epd2in7 (legacy V1)")
-        return EPD
+        return EPD  # type: ignore[no-any-return]
     from waveshare.epd2in7_V2 import EPD
 
     logger.info("e-Paper driver: epd2in7_V2 (V2, default)")
-    return EPD
+    return EPD  # type: ignore[no-any-return]
 
 
 FULL_REFRESH_INTERVAL = 900
@@ -54,13 +55,13 @@ class Epd27Device(DisplayDevice):
     def __init__(self) -> None:
         os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
         self._EPD = _epd_driver_class()
-        self._epd: object | None = None
-        self._prev_buffer: list | None = None
+        self._epd: Any | None = None
+        self._prev_buffer: list[int] | None = None
         self._base_seeded = False
         self._partial_count = 0
         atexit.register(self._shutdown_epd)
 
-    def _ensure_epd(self) -> object:
+    def _ensure_epd(self) -> Any:
         if self._epd is None:
             epd = self._EPD()
             if epd.init() != 0:
@@ -90,7 +91,11 @@ class Epd27Device(DisplayDevice):
         self._prev_buffer = list(buffer)
 
         if not self._base_seeded or self._partial_count >= FULL_REFRESH_INTERVAL:
-            logger.info("Full refresh (seed=%s, partial_count=%d)", not self._base_seeded, self._partial_count)
+            logger.info(
+                "Full refresh (seed=%s, partial_count=%d)",
+                not self._base_seeded,
+                self._partial_count,
+            )
             epd.display_Base(buffer)
             self._base_seeded = True
             self._partial_count = 0

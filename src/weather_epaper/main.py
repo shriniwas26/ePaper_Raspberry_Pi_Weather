@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Weather on Waveshare 2.7\" e-paper")
+    p = argparse.ArgumentParser(description='Weather on Waveshare 2.7" e-paper')
     p.add_argument(
         "--mock",
         action="store_true",

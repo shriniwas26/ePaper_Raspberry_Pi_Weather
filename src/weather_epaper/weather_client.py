@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import time
 from dataclasses import dataclass
@@ -85,7 +86,13 @@ def fetch_current(
             break
         except (httpx.RequestError, httpx.HTTPStatusError) as exc:
             if attempt < retries:
-                logger.warning("Fetch attempt %d/%d failed: %s - retrying in %.1fs", attempt, retries, exc, retry_delay)
+                logger.warning(
+                    "Fetch attempt %d/%d failed: %s - retrying in %.1fs",
+                    attempt,
+                    retries,
+                    exc,
+                    retry_delay,
+                )
                 time.sleep(retry_delay)
             else:
                 logger.error("All %d fetch attempts failed", retries)
@@ -93,6 +100,7 @@ def fetch_current(
 
     current = payload["current"]
     api_tz_name = payload.get("timezone") or "UTC"
+    api_tz: dt.tzinfo
     try:
         api_tz = ZoneInfo(api_tz_name)
     except Exception:
@@ -123,9 +131,7 @@ def fetch_current(
             else None
         ),
         wind_speed_kmh=(
-            float(current["wind_speed_10m"])
-            if current.get("wind_speed_10m") is not None
-            else None
+            float(current["wind_speed_10m"]) if current.get("wind_speed_10m") is not None else None
         ),
         weather_label=label,
         fetched_at_utc=fetched_at_utc,
