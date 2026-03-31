@@ -8,14 +8,18 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/ePaper_Raspi
 Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/home/pi
+# Bookworm+/Pi 5: sysfs /sys/class/gpio is gone; native pin factory fails without this.
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+# Old 2.7in HAT (pre-2022): Environment=WEATHER_EPAPER_EPD=v1
 # Set your location (example: London)
 # Environment=WEATHER_EPAPER_LAT=51.5074
 # Environment=WEATHER_EPAPER_LON=-0.1278
 # Environment=WEATHER_EPAPER_TZ=Europe/London
 # Environment=WEATHER_EPAPER_REFRESH_SEC=1800
-ExecStart=/home/pi/ePaper_Raspi/.venv/bin/python -m weather_epaper
+ExecStart=/home/pi/ePaper_Raspi/scripts/run-service.sh
 Restart=on-failure
-RestartSec=120
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

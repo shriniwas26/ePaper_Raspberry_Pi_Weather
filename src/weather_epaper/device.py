@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -26,13 +27,27 @@ class MockDevice(DisplayDevice):
         logger.info("Wrote mock preview to %s", self._output_path)
 
 
+def _epd_driver_class():
+    """V2 SSD1680 protocol is used on current 2.7\" B/W HATs; V1 is older stock."""
+    variant = os.environ.get("WEATHER_EPAPER_EPD", "v2").strip().lower()
+    if variant in ("v1", "1", "legacy", "old"):
+        from waveshare.epd2in7 import EPD
+
+        logger.info("e-Paper driver: epd2in7 (legacy V1)")
+        return EPD
+    from waveshare.epd2in7_V2 import EPD
+
+    logger.info("e-Paper driver: epd2in7_V2 (V2, default)")
+    return EPD
+
+
 class Epd27Device(DisplayDevice):
     """Waveshare 2.7\" B/W HAT via vendored waveshare driver (PI only)."""
 
     def __init__(self) -> None:
-        from waveshare.epd2in7 import EPD
-
-        self._EPD = EPD
+        # Pi OS Bookworm+: sysfs GPIO is unavailable; gpiozero defaults to native and fails.
+        os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
+        self._EPD = _epd_driver_class()
         self._epd: object | None = None
 
     def show(self, image: Image.Image) -> None:
