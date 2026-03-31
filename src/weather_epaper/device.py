@@ -45,6 +45,9 @@ def _epd_driver_class():
     return EPD
 
 
+FULL_REFRESH_INTERVAL = 30
+
+
 class Epd27Device(DisplayDevice):
     """Waveshare 2.7\" B/W HAT via vendored waveshare driver (PI only)."""
 
@@ -55,6 +58,7 @@ class Epd27Device(DisplayDevice):
         self._epd: object | None = None
         self._prev_buffer: list | None = None
         self._base_seeded = False
+        self._partial_count = 0
         atexit.register(self._shutdown_epd)
 
     def _ensure_epd(self) -> object:
@@ -77,6 +81,7 @@ class Epd27Device(DisplayDevice):
             self._epd = None
             self._base_seeded = False
             self._prev_buffer = None
+            self._partial_count = 0
 
     def show(self, image: Image.Image) -> None:
         epd = self._ensure_epd()
@@ -84,5 +89,12 @@ class Epd27Device(DisplayDevice):
         if buffer == self._prev_buffer:
             return
         self._prev_buffer = list(buffer)
-        epd.display(buffer)
-        self._base_seeded = True
+
+        if not self._base_seeded or self._partial_count >= FULL_REFRESH_INTERVAL:
+            logger.info("Full refresh (seed=%s, partial_count=%d)", not self._base_seeded, self._partial_count)
+            epd.display_Base(buffer)
+            self._base_seeded = True
+            self._partial_count = 0
+        else:
+            epd.display_Partial_Wait(buffer)
+            self._partial_count += 1
