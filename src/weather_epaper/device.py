@@ -54,7 +54,6 @@ class Epd27Device(DisplayDevice):
     def __init__(self) -> None:
         os.environ.setdefault("GPIOZERO_PIN_FACTORY", "lgpio")
         self._EPD = _epd_driver_class()
-        self._v2 = _is_v2()
         self._epd: object | None = None
         self._prev_buffer: list | None = None
         self._base_seeded = False

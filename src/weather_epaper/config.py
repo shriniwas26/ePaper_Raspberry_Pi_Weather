@@ -43,7 +43,6 @@ class Settings:
     latitude: float
     longitude: float
     timezone: str | None
-    location_label: str
     weather_refresh_seconds: int
     mock_output_path: str
     weather_history_path: str
@@ -57,7 +56,6 @@ class Settings:
             latitude=_env_float("WEATHER_EPAPER_LAT", 51.4416),
             longitude=_env_float("WEATHER_EPAPER_LON", 5.4697),
             timezone=tz_opt,
-            location_label=os.environ.get("WEATHER_EPAPER_LABEL", "Eindhoven"),
             weather_refresh_seconds=max(1, _weather_poll_seconds()),
             mock_output_path=os.environ.get("WEATHER_EPAPER_MOCK_OUTPUT", "out/preview.png"),
             weather_history_path=os.environ.get(

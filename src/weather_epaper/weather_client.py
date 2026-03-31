@@ -73,7 +73,6 @@ def fetch_current(
     else:
         params["timezone"] = "auto"
 
-    last_exc: Exception | None = None
     for attempt in range(1, retries + 1):
         try:
             with httpx.Client(timeout=timeout) as client:
@@ -82,7 +81,6 @@ def fetch_current(
                 payload = response.json()
             break
         except (httpx.TimeoutException, httpx.HTTPStatusError) as exc:
-            last_exc = exc
             if attempt < retries:
                 log.warning("Fetch attempt %d/%d failed: %s – retrying in %.1fs", attempt, retries, exc, retry_delay)
                 time.sleep(retry_delay)

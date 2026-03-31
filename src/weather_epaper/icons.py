@@ -8,7 +8,7 @@ from PIL import ImageFont
 
 def mdi_char(mdi_attr: str) -> str:
     """`fonticon_mdi6` stores values as ``'mdi6.<char>'``; return the single codepoint."""
-    _prefix, ch = mdi_attr.split(".", 1)
+    _, ch = mdi_attr.split(".", 1)
     return ch
 
 
