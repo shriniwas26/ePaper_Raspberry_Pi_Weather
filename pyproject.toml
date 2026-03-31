@@ -32,3 +32,8 @@ only-include = ["src/weather_epaper", "third_party/waveshare"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/weather_epaper", "third_party/waveshare", "pyproject.toml"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.8",
+]
