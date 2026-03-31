@@ -17,9 +17,9 @@ from weather_epaper.weather_client import CurrentWeather
 CANVAS_WIDTH = 264
 CANVAS_HEIGHT = 176
 MARGIN = 8
-BAR_H = 20
-BAR_ICON_PX = 14
-BAR_ICON_BOX = 16
+BAR_H = 26
+BAR_ICON_PX = 18
+BAR_ICON_BOX = 20
 
 _FONTS_DIR = Path(__file__).resolve().parent.parent.parent / "fonts"
 
@@ -89,7 +89,7 @@ def _draw_bar_item(
     tx = x + BAR_ICON_BOX + 3
     tb = draw.textbbox((0, 0), label, font=text_font)
     text_h = tb[3] - tb[1]
-    ty = mid_y - text_h // 2
+    ty = mid_y - text_h // 2 - tb[1]
     draw.text((tx, ty), label, font=text_font, fill=fill)
 
     return BAR_ICON_BOX + 3 + (tb[2] - tb[0])
@@ -140,7 +140,7 @@ def weather_image(
     font_temp = _load_font(46)
     font_clock = _load_font(56)
     font_date = _load_font(18)
-    font_bar = _load_font(12)
+    font_bar = _load_font(14)
     font_bar_mdi = mdi_font(BAR_ICON_PX)
 
     usable_w = w - 2 * MARGIN
@@ -184,8 +184,7 @@ def weather_image(
     bar_items: list[tuple[str, str]] = []
     if weather.apparent_temperature_c is not None:
         fc = round(weather.apparent_temperature_c)
-        ff = round(weather.apparent_temperature_c * 9.0 / 5.0 + 32.0)
-        bar_items.append((GLYPH_THERMOMETER, f"{fc}\u00b0/{ff}\u00b0"))
+        bar_items.append((GLYPH_THERMOMETER, f"{fc}\u00b0C"))
     if weather.relative_humidity_pct is not None:
         bar_items.append((GLYPH_WATER, f"{weather.relative_humidity_pct}%"))
     if weather.wind_speed_kmh is not None:
