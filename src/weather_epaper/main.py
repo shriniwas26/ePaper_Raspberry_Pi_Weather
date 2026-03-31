@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from weather_epaper.config import Settings, truthy_env
-from weather_epaper.device import Epd27Device, MockDevice
+from weather_epaper.device import DisplayDevice, Epd27Device, MockDevice
 from weather_epaper.render import weather_image
 from weather_epaper.weather_history import append_weather_history
 from weather_epaper.weather_client import CurrentWeather, fetch_current
@@ -28,7 +28,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def _device(settings: Settings):
+def _device(settings: Settings) -> DisplayDevice:
     if settings.mock:
         return MockDevice(Path(settings.mock_output_path))
     return Epd27Device()

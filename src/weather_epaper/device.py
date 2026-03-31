@@ -32,7 +32,7 @@ def _is_v2() -> bool:
     return variant not in ("v1", "1", "legacy", "old")
 
 
-def _epd_driver_class():
+def _epd_driver_class() -> type:
     """V2 SSD1680 protocol is used on current 2.7\" B/W HATs; V1 is older stock."""
     if not _is_v2():
         from waveshare.epd2in7 import EPD

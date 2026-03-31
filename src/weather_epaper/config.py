@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -20,7 +21,7 @@ def _env_int(name: str, default: int) -> int:
     return int(raw)
 
 
-def resolve_display_tz(zone_name: str | None):
+def resolve_display_tz(zone_name: str | None) -> dt.tzinfo:
     """IANA zone from WEATHER_EPAPER_TZ, else the process/system local zone (e.g. Pi /etc/localtime)."""
     if zone_name:
         try:
@@ -47,7 +48,7 @@ class Settings:
     mock_output_path: str
     weather_history_path: str
     mock: bool
-    display_tz: datetime.tzinfo
+    display_tz: dt.tzinfo
 
     @classmethod
     def from_environ(cls, mock: bool) -> Settings:
