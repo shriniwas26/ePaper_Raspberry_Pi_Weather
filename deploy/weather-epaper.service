@@ -1,0 +1,21 @@
+[Unit]
+Description=Weather display on Waveshare 2.7 inch e-paper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/ePaper_Raspi
+Environment=PYTHONUNBUFFERED=1
+# Set your location (example: London)
+# Environment=WEATHER_EPAPER_LAT=51.5074
+# Environment=WEATHER_EPAPER_LON=-0.1278
+# Environment=WEATHER_EPAPER_TZ=Europe/London
+# Environment=WEATHER_EPAPER_REFRESH_SEC=1800
+ExecStart=/home/pi/ePaper_Raspi/.venv/bin/python -m weather_epaper
+Restart=on-failure
+RestartSec=120
+
+[Install]
+WantedBy=multi-user.target
