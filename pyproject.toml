@@ -13,7 +13,7 @@ dependencies = [
 pi = [
     "spidev>=3.5",
     "gpiozero>=2.0",
-    "lgpio>=0.2.2.0",
+    "lgpio>=0.2.0",
 ]
 
 [project.scripts]
