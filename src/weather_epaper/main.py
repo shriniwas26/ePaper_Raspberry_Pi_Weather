@@ -66,7 +66,6 @@ def run_loop(settings: Settings, args: argparse.Namespace) -> int:
             try:
                 img = weather_image(
                     w,
-                    location_label=settings.location_label,
                     display_tz=settings.display_tz,
                 )
                 device.show(img)

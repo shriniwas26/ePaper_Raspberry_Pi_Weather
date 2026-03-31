@@ -134,7 +134,6 @@ def _draw_bottom_bar(
 def weather_image(
     weather: CurrentWeather,
     *,
-    location_label: str | None = None,
     display_tz: dt.tzinfo | None = None,
 ) -> Image.Image:
     w, h = CANVAS_WIDTH, CANVAS_HEIGHT
@@ -165,7 +164,6 @@ def weather_image(
     now = dt.datetime.now(tz)
     hm_s = now.strftime("%H:%M")
     sec_s = now.strftime(":%S")
-    time_s = hm_s + sec_s
     date_s = now.strftime("%A, %d %b")
     if _text_width(draw, date_s, font_date) > usable_w:
         date_s = now.strftime("%a, %d %b")
