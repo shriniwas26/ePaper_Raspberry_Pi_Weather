@@ -1,5 +1,10 @@
 """Weather display for Waveshare 2.7\" B/W e-paper."""
 
-__all__ = ["__version__"]
+from importlib.metadata import version, PackageNotFoundError
 
-__version__ = "0.1.0"
+try:
+    __version__ = version("weather-epaper")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
+
+__all__ = ["__version__"]
