@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -85,7 +85,7 @@ def fetch_current(
             break
         except (httpx.RequestError, httpx.HTTPStatusError) as exc:
             if attempt < retries:
-                logger.warning("Fetch attempt %d/%d failed: %s – retrying in %.1fs", attempt, retries, exc, retry_delay)
+                logger.warning("Fetch attempt %d/%d failed: %s - retrying in %.1fs", attempt, retries, exc, retry_delay)
                 time.sleep(retry_delay)
             else:
                 logger.error("All %d fetch attempts failed", retries)
@@ -96,7 +96,7 @@ def fetch_current(
     try:
         api_tz = ZoneInfo(api_tz_name)
     except Exception:
-        api_tz = timezone.utc
+        api_tz = UTC
 
     time_str = current["time"]
     if time_str.endswith("Z"):
@@ -105,7 +105,7 @@ def fetch_current(
         fetched_at = datetime.fromisoformat(time_str)
         if fetched_at.tzinfo is None:
             fetched_at = fetched_at.replace(tzinfo=api_tz)
-    fetched_at_utc = fetched_at.astimezone(timezone.utc)
+    fetched_at_utc = fetched_at.astimezone(UTC)
 
     code = int(current["weather_code"])
     label = _weather_code_label(code)

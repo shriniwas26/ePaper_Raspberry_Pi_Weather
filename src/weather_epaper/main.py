@@ -9,8 +9,8 @@ from pathlib import Path
 from weather_epaper.config import Settings, truthy_env
 from weather_epaper.device import DisplayDevice, Epd27Device, MockDevice
 from weather_epaper.render import weather_image
-from weather_epaper.weather_history import append_weather_history
 from weather_epaper.weather_client import CurrentWeather, fetch_current
+from weather_epaper.weather_history import append_weather_history
 
 logger = logging.getLogger(__name__)
 

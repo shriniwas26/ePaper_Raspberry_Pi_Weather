@@ -4,7 +4,7 @@ import datetime as dt
 import logging
 import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ def resolve_display_tz(zone_name: str | None) -> dt.tzinfo:
         except Exception:
             logger.warning("Invalid timezone %r, falling back to system local", zone_name)
     local = datetime.now().astimezone().tzinfo
-    return local if local is not None else timezone.utc
+    return local if local is not None else dt.UTC
 
 
 def _weather_poll_seconds() -> int:

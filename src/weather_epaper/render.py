@@ -64,8 +64,8 @@ def _text_height(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont
 
 
 def _weather_age_label(fetched_at_utc: dt.datetime) -> str:
-    now = dt.datetime.now(dt.timezone.utc)
-    ft = fetched_at_utc.astimezone(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
+    ft = fetched_at_utc.astimezone(dt.UTC)
     secs = int(max(0, (now - ft).total_seconds()))
     if secs < 45:
         return "now"
@@ -114,7 +114,7 @@ def _draw_bottom_bar(
     usable = CANVAS_WIDTH - 2 * MARGIN
 
     item_widths: list[int] = []
-    for glyph, label in items:
+    for _glyph, label in items:
         tb = draw.textbbox((0, 0), label, font=text_font)
         item_widths.append(BAR_ICON_BOX + 3 + (tb[2] - tb[0]))
 
@@ -126,7 +126,7 @@ def _draw_bottom_bar(
         gap = 6
 
     x = MARGIN
-    for (glyph, label), iw in zip(items, item_widths):
+    for (glyph, label), iw in zip(items, item_widths, strict=True):
         _draw_bar_item(draw, x, y, glyph, icon_font, label, text_font, fill=fill)
         x += iw + gap
 
@@ -142,7 +142,7 @@ def weather_image(
 
     tz = display_tz or weather.fetched_at_utc.astimezone().tzinfo
     if tz is None:
-        tz = dt.timezone.utc
+        tz = dt.UTC
 
     font_temp = _load_font(46)
     font_clock = _load_font(56)
