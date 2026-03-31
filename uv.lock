@@ -229,7 +229,7 @@ requires-dist = [
     { name = "fonticon-materialdesignicons6", specifier = ">=6.9.96" },
     { name = "gpiozero", marker = "extra == 'pi'", specifier = ">=2.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "lgpio", marker = "extra == 'pi'", specifier = ">=0.2.2.0" },
+    { name = "lgpio", marker = "extra == 'pi'", specifier = ">=0.2.0" },
     { name = "pillow", specifier = ">=10.0.0" },
     { name = "spidev", marker = "extra == 'pi'", specifier = ">=3.5" },
 ]
