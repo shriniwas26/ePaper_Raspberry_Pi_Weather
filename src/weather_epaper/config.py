@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 def _env_float(name: str, default: float) -> float:
@@ -18,24 +20,59 @@ def _env_int(name: str, default: int) -> int:
     return int(raw)
 
 
+def resolve_display_tz(zone_name: str | None):
+    """IANA zone from WEATHER_EPAPER_TZ, else the process/system local zone (e.g. Pi /etc/localtime)."""
+    if zone_name:
+        try:
+            return ZoneInfo(zone_name)
+        except Exception:
+            pass
+    local = datetime.now().astimezone().tzinfo
+    return local if local is not None else timezone.utc
+
+
+def _weather_poll_seconds() -> int:
+    """Open-Meteo fetch interval (unchanged env: WEATHER_EPAPER_REFRESH_SEC)."""
+    if (w := os.environ.get("WEATHER_EPAPER_WEATHER_SEC")) is not None and w != "":
+        return int(w)
+    return _env_int("WEATHER_EPAPER_REFRESH_SEC", 1800)
+
+
+def _display_poll_seconds() -> int:
+    """How often to redraw the e-paper (clock uses wall time; weather reuses cache). Default 5s."""
+    return _env_int("WEATHER_EPAPER_DISPLAY_SEC", 5)
+
+
 @dataclass(frozen=True)
 class Settings:
     latitude: float
     longitude: float
     timezone: str | None
-    refresh_seconds: int
+    location_label: str
+    weather_refresh_seconds: int
+    display_refresh_seconds: int
     mock_output_path: str
+    weather_history_path: str
     mock: bool
+    display_tz: datetime.tzinfo
 
     @classmethod
     def from_environ(cls, mock: bool) -> Settings:
+        tz_opt = os.environ.get("WEATHER_EPAPER_TZ") or None
         return cls(
-            latitude=_env_float("WEATHER_EPAPER_LAT", 40.7128),
-            longitude=_env_float("WEATHER_EPAPER_LON", -74.0060),
-            timezone=os.environ.get("WEATHER_EPAPER_TZ") or None,
-            refresh_seconds=_env_int("WEATHER_EPAPER_REFRESH_SEC", 1800),
+            latitude=_env_float("WEATHER_EPAPER_LAT", 51.4416),
+            longitude=_env_float("WEATHER_EPAPER_LON", 5.4697),
+            timezone=tz_opt,
+            location_label=os.environ.get("WEATHER_EPAPER_LABEL", "Eindhoven"),
+            weather_refresh_seconds=max(1, _weather_poll_seconds()),
+            display_refresh_seconds=max(1, _display_poll_seconds()),
             mock_output_path=os.environ.get("WEATHER_EPAPER_MOCK_OUTPUT", "out/preview.png"),
+            weather_history_path=os.environ.get(
+                "WEATHER_EPAPER_HISTORY_JSON",
+                "data/weather_history.json",
+            ),
             mock=mock,
+            display_tz=resolve_display_tz(tz_opt),
         )
 
 

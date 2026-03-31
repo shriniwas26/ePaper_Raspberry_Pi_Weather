@@ -14,6 +14,7 @@ class CurrentWeather:
     temperature_c: float
     apparent_temperature_c: float | None
     relative_humidity_pct: int | None
+    wind_speed_kmh: float | None
     weather_label: str
     fetched_at_utc: datetime
 
@@ -54,12 +55,16 @@ def fetch_current(
                 "temperature_2m",
                 "apparent_temperature",
                 "relative_humidity_2m",
+                "wind_speed_10m",
                 "weather_code",
             ]
         ),
+        "wind_speed_unit": "kmh",
     }
     if timezone_name:
         params["timezone"] = timezone_name
+    else:
+        params["timezone"] = "auto"
 
     with httpx.Client(timeout=timeout) as client:
         response = client.get(OPEN_METEO_URL, params=params)
@@ -67,18 +72,20 @@ def fetch_current(
         payload = response.json()
 
     current = payload["current"]
-    tz = timezone_name or payload.get("timezone") or "UTC"
+    api_tz_name = payload.get("timezone") or "UTC"
     try:
-        zi = ZoneInfo(tz)
+        api_tz = ZoneInfo(api_tz_name)
     except Exception:
-        zi = timezone.utc
+        api_tz = timezone.utc
 
     time_str = current["time"]
-    fetched_at = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
-    if fetched_at.tzinfo is None:
-        fetched_at = fetched_at.replace(tzinfo=zi)
+    if time_str.endswith("Z"):
+        fetched_at = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
     else:
-        fetched_at = fetched_at.astimezone(timezone.utc)
+        fetched_at = datetime.fromisoformat(time_str)
+        if fetched_at.tzinfo is None:
+            fetched_at = fetched_at.replace(tzinfo=api_tz)
+    fetched_at_utc = fetched_at.astimezone(timezone.utc)
 
     code = int(current["weather_code"])
     label = _weather_code_label(code)
@@ -95,6 +102,11 @@ def fetch_current(
             if current.get("relative_humidity_2m") is not None
             else None
         ),
+        wind_speed_kmh=(
+            float(current["wind_speed_10m"])
+            if current.get("wind_speed_10m") is not None
+            else None
+        ),
         weather_label=label,
-        fetched_at_utc=fetched_at,
+        fetched_at_utc=fetched_at_utc,
     )

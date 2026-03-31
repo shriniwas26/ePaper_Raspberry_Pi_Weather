@@ -5,10 +5,17 @@ import logging
 import time
 from pathlib import Path
 
+from PIL import Image
+
 from weather_epaper.config import Settings, truthy_env
 from weather_epaper.device import Epd27Device, MockDevice
-from weather_epaper.render import weather_image
-from weather_epaper.weather_client import fetch_current
+from weather_epaper.render import (
+    left_panel_fingerprint,
+    weather_image,
+    weather_image_clock_only,
+)
+from weather_epaper.weather_history import append_weather_history
+from weather_epaper.weather_client import CurrentWeather, fetch_current
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -38,22 +45,56 @@ def run_loop(settings: Settings, args: argparse.Namespace) -> int:
         format="%(levelname)s %(name)s: %(message)s",
     )
     device = _device(settings)
-    location_label = f"{settings.latitude:.2f},{settings.longitude:.2f}"
+
+    w: CurrentWeather | None = None
+    next_weather_mono = 0.0
+    last_full_image: Image.Image | None = None
 
     while True:
-        try:
-            w = fetch_current(
-                settings.latitude,
-                settings.longitude,
-                timezone_name=settings.timezone,
-            )
-            img = weather_image(w, location_label=location_label)
-            device.show(img)
-        except Exception:
-            logging.exception("Update failed")
+        now_mono = time.monotonic()
+        left_changed = False
+        if w is None or now_mono >= next_weather_mono:
+            try:
+                w_new = fetch_current(
+                    settings.latitude,
+                    settings.longitude,
+                    timezone_name=settings.timezone,
+                )
+                next_weather_mono = now_mono + settings.weather_refresh_seconds
+                left_changed = w is None or left_panel_fingerprint(w) != left_panel_fingerprint(
+                    w_new
+                )
+                w = w_new
+                try:
+                    append_weather_history(Path(settings.weather_history_path), w_new)
+                except OSError:
+                    logging.exception("Weather history write failed")
+            except Exception:
+                logging.exception("Weather fetch failed")
+                if w is None:
+                    logging.error("No weather data yet; retrying after display interval")
+        if w is not None:
+            try:
+                hardware_full = args.once or left_changed
+                if hardware_full or last_full_image is None:
+                    img = weather_image(
+                        w,
+                        location_label=settings.location_label,
+                        display_tz=settings.display_tz,
+                    )
+                    last_full_image = img.copy()
+                else:
+                    img = weather_image_clock_only(
+                        last_full_image,
+                        w,
+                        display_tz=settings.display_tz,
+                    )
+                device.show(img, full_refresh=hardware_full)
+            except Exception:
+                logging.exception("Display update failed")
         if args.once:
             break
-        time.sleep(max(60, settings.refresh_seconds))
+        time.sleep(settings.display_refresh_seconds)
     return 0
 
 

@@ -5,9 +5,9 @@ set -euo pipefail
 # Installs deploy/weather-epaper.service, reloads systemd, enables and starts the unit.
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  echo "Usage: ./scripts/install-service.sh"
-  echo "Requires sudo for installing the unit under /etc/systemd/system/."
-  exit 0
+	echo "Usage: ./scripts/install-service.sh"
+	echo "Requires sudo for installing the unit under /etc/systemd/system/."
+	exit 0
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,14 +15,14 @@ ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 UNIT_SRC="${ROOT}/deploy/weather-epaper.service"
 
 if [[ ! -f "${UNIT_SRC}" ]]; then
-  echo "Missing unit file: ${UNIT_SRC}" >&2
-  exit 1
+	echo "Missing unit file: ${UNIT_SRC}" >&2
+	exit 1
 fi
 
 if [[ $(id -u) -eq 0 ]]; then
-  SUDO=""
+	SUDO="sudo"
 else
-  SUDO="sudo"
+	SUDO="sudo"
 fi
 
 echo "install-service: project root=${ROOT}"

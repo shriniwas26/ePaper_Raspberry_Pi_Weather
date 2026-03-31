@@ -37,6 +37,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fonticon-materialdesignicons6"
+version = "6.9.96"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/17/5ccdaaf03de6527b9cb086b63fc12f0befb0e1ed41caa7f042394b8bba0a/fonticon_materialdesignicons6-6.9.96.tar.gz", hash = "sha256:b382a662520c095e513e51b8586cb71f9a9ab5f56d6df9fba89f334e0e61b297", size = 609869, upload-time = "2023-04-17T17:16:20.128Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/7d/dbb0ba9372893ec0316bf8c630b9de2c8a5e2d0cc5d65c6884f13075f3f1/fonticon_materialdesignicons6-6.9.96-py3-none-any.whl", hash = "sha256:313ea02b68bcc04b604c4172a2fc93b24c799216b9b210dd7d2f8135cc4fa3b4", size = 608618, upload-time = "2023-04-17T17:16:17.801Z" },
+]
+
+[[package]]
 name = "gpiozero"
 version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -203,6 +212,7 @@ name = "weather-epaper"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "fonticon-materialdesignicons6" },
     { name = "httpx" },
     { name = "pillow" },
 ]
@@ -216,6 +226,7 @@ pi = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fonticon-materialdesignicons6", specifier = ">=6.9.96" },
     { name = "gpiozero", marker = "extra == 'pi'", specifier = ">=2.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "lgpio", marker = "extra == 'pi'", specifier = ">=0.2.2.0" },
