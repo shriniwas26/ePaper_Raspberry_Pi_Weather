@@ -12,13 +12,12 @@ Environment=HOME=/home/pi
 # Bookworm+/Pi 5: sysfs /sys/class/gpio is gone; native pin factory fails without this.
 Environment=GPIOZERO_PIN_FACTORY=lgpio
 # Old 2.7in HAT (pre-2022): Environment=WEATHER_EPAPER_EPD=v1
-# Defaults: Open-Meteo for Eindhoven (override with WEATHER_EPAPER_LAT/LON/LABEL).
-# Environment=WEATHER_EPAPER_LABEL=Rotterdam
+# Defaults: Open-Meteo for Eindhoven (override with WEATHER_EPAPER_LAT/LON).
 # Optional IANA tz for forecast + clock; omit to use Pi system timezone (see timedatectl).
 # Environment=WEATHER_EPAPER_TZ=Europe/Amsterdam
-# WEATHER_EPAPER_REFRESH_SEC = Open-Meteo poll interval (default 1800).
+# WEATHER_EPAPER_REFRESH_SEC = Open-Meteo poll interval (default 600).
 # WEATHER_EPAPER_HISTORY_JSON = rounded weather snapshots, newest first, max 5 (default data/weather_history.json).
-# Environment=WEATHER_EPAPER_REFRESH_SEC=1800
+# Environment=WEATHER_EPAPER_REFRESH_SEC=600
 ExecStart=/home/pi/ePaper_Raspi/scripts/run-service.sh
 Restart=on-failure
 RestartSec=10
