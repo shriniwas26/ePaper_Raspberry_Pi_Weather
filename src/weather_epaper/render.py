@@ -16,13 +16,11 @@ from weather_epaper.weather_client import CurrentWeather
 # Landscape: 264x176 (epd2in7 horizontal buffer).
 CANVAS_WIDTH = 264
 CANVAS_HEIGHT = 176
-SPLIT_X = CANVAS_WIDTH // 2
-HEADER_H = 0
+SPLIT_X = 156
+MARGIN = 5
 ICON_BOX = 20
 ICON_MDI_PX = 19
 ROW_H = 24
-LEFT_PAD = 8
-RIGHT_PAD = 6
 
 def _right_panel_fonts() -> tuple[
     ImageFont.FreeTypeFont | ImageFont.ImageFont,
@@ -30,9 +28,9 @@ def _right_panel_fonts() -> tuple[
     ImageFont.FreeTypeFont | ImageFont.ImageFont,
 ]:
     return (
-        _load_font(20),
-        _load_font(18),
-        _load_mono_font(42),
+        _load_font(16),
+        _load_font(14),
+        _load_mono_font(32),
     )
 
 
@@ -153,7 +151,7 @@ def _draw_metric_row(
     iy = mid_y - icon_h // 2 - ib[1]
     draw.text((ix, iy), glyph, font=icon_font, fill=0)
 
-    tx = x_icon + ICON_BOX + 5
+    tx = x_icon + ICON_BOX + 4
     draw.text((tx, ty), label, font=font, fill=0)
 
 
@@ -175,34 +173,36 @@ def _draw_right_panel(
     date_s = now.strftime("%d %b")
     time_s = now.strftime("%H:%M")
 
-    inner_x0 = split_x + RIGHT_PAD
-    inner_x1 = canvas_w - RIGHT_PAD
-    inner_y0 = HEADER_H + RIGHT_PAD
-    inner_y1 = canvas_h - RIGHT_PAD
-    inner_w = inner_x1 - inner_x0
-    inner_h = inner_y1 - inner_y0
+    x0 = split_x + MARGIN
+    x1 = canvas_w - MARGIN
+    y0 = MARGIN
+    y1 = canvas_h - MARGIN
+    inner_w = x1 - x0
+    inner_h = y1 - y0
 
-    rw = inner_w - 8
-    location = _truncate_to_width(draw, location_label, font_location, rw)
-    if _text_width(draw, weekday, font_weekday) > rw:
+    location = _truncate_to_width(draw, location_label, font_location, inner_w)
+    if _text_width(draw, weekday, font_weekday) > inner_w:
         weekday = now.strftime("%a")
 
     loc_h = _text_height(draw, location, font_location)
     d_h = _text_height(draw, weekday, font_weekday)
     dt_h = _text_height(draw, date_s, font_date)
     tm_h = _text_height(draw, time_s, font_time)
-    gap = 4
-    gap2 = 6
+    gap = 3
+    gap2 = 5
     block_h = loc_h + gap + d_h + gap + dt_h + gap2 + tm_h
-    y_c = inner_y0 + max(0, (inner_h - block_h) // 2)
+    y_c = y0 + max(0, (inner_h - block_h) // 2)
 
-    draw.text((inner_x0 + (inner_w - _text_width(draw, location, font_location)) // 2, y_c), location, font=font_location, fill=0)
+    def _cx(text: str, font: ImageFont.ImageFont) -> int:
+        return x0 + (inner_w - _text_width(draw, text, font)) // 2
+
+    draw.text((_cx(location, font_location), y_c), location, font=font_location, fill=0)
     y_c += loc_h + gap
-    draw.text((inner_x0 + (inner_w - _text_width(draw, weekday, font_weekday)) // 2, y_c), weekday, font=font_weekday, fill=0)
+    draw.text((_cx(weekday, font_weekday), y_c), weekday, font=font_weekday, fill=0)
     y_c += d_h + gap
-    draw.text((inner_x0 + (inner_w - _text_width(draw, date_s, font_date)) // 2, y_c), date_s, font=font_date, fill=0)
+    draw.text((_cx(date_s, font_date), y_c), date_s, font=font_date, fill=0)
     y_c += dt_h + gap2
-    draw.text((inner_x0 + (inner_w - _text_width(draw, time_s, font_time)) // 2, y_c), time_s, font=font_time, fill=0)
+    draw.text((_cx(time_s, font_time), y_c), time_s, font=font_time, fill=0)
 
 
 def weather_image(
@@ -215,83 +215,60 @@ def weather_image(
     image = Image.new("1", (w, h), 255)
     draw = ImageDraw.Draw(image)
 
-    font_hero = _load_font(38)
+    font_temp = _load_font(28)
     font_cond = _load_font(16)
-    font_metric = _load_font(16)
-    font_weekday, font_rdate, font_rtime = _right_panel_fonts()
-    font_ago = _load_font(14)
+    font_metric = _load_font(14)
+    font_ago = _load_font(12)
     font_mdi = mdi_font(ICON_MDI_PX)
+    font_weekday, font_rdate, font_rtime = _right_panel_fonts()
 
-    left_max = SPLIT_X - LEFT_PAD - 4
-    y = LEFT_PAD
+    lx = MARGIN
+    left_max = SPLIT_X - 2 * MARGIN
+    y = MARGIN
+
     tc = round(weather.temperature_c)
     tf = round(weather.temperature_c * 9.0 / 5.0 + 32.0)
     temp_line = f"{tc}\u00b0C / {tf}\u00b0F"
-    font_temp = font_hero
-    if _text_width(draw, temp_line, font_temp) > left_max:
-        font_temp = _load_font(26)
-    if _text_width(draw, temp_line, font_temp) > left_max:
-        font_temp = _load_font(22)
-    draw.text((LEFT_PAD, y), temp_line, font=font_temp, fill=0)
-    th = _text_height(draw, temp_line, font_temp)
+    for fallback in (26, 24):
+        if _text_width(draw, temp_line, font_temp) <= left_max:
+            break
+        font_temp = _load_font(fallback)
+    draw.text((lx, y), temp_line, font=font_temp, fill=0)
+    y += _text_height(draw, temp_line, font_temp) + 10
 
-    y += max(th, 28) + 2
     cond = _truncate_to_width(draw, weather.weather_label, font_cond, left_max)
-    draw.text((LEFT_PAD, y), cond, font=font_cond, fill=0)
-    y += _text_height(draw, cond, font_cond) + 6
+    draw.text((lx, y), cond, font=font_cond, fill=0)
+    y += _text_height(draw, cond, font_cond) + 8
 
     if weather.apparent_temperature_c is not None:
         fc = round(weather.apparent_temperature_c)
         ff = round(weather.apparent_temperature_c * 9.0 / 5.0 + 32.0)
         _draw_metric_row(
-            draw,
-            LEFT_PAD,
-            y,
-            GLYPH_THERMOMETER,
-            font_mdi,
-            f"{fc}\u00b0C / {ff}\u00b0F",
-            font_metric,
+            draw, lx, y, GLYPH_THERMOMETER, font_mdi,
+            f"{fc}\u00b0C / {ff}\u00b0F", font_metric,
         )
         y += ROW_H
     if weather.relative_humidity_pct is not None:
         _draw_metric_row(
-            draw,
-            LEFT_PAD,
-            y,
-            GLYPH_WATER,
-            font_mdi,
-            f"{weather.relative_humidity_pct}%",
-            font_metric,
+            draw, lx, y, GLYPH_WATER, font_mdi,
+            f"{weather.relative_humidity_pct}%", font_metric,
         )
         y += ROW_H
     if weather.wind_speed_kmh is not None:
         wk = round(weather.wind_speed_kmh)
         _draw_metric_row(
-            draw,
-            LEFT_PAD,
-            y,
-            GLYPH_WIND,
-            font_mdi,
-            f"{wk} km/h",
-            font_metric,
+            draw, lx, y, GLYPH_WIND, font_mdi,
+            f"{wk} km/h", font_metric,
         )
         y += ROW_H
 
     ago_s = _weather_age_label(weather.fetched_at_utc)
-    _draw_metric_row(
-        draw,
-        LEFT_PAD,
-        y,
-        GLYPH_REFRESH,
-        font_mdi,
-        ago_s,
-        font_ago,
-    )
+    _draw_metric_row(draw, lx, y, GLYPH_REFRESH, font_mdi, ago_s, font_ago)
 
     tz = display_tz or weather.fetched_at_utc.astimezone().tzinfo
     if tz is None:
         tz = dt.timezone.utc
-    font_loc = _load_font(12)
+    font_loc = _load_font(11)
     _draw_right_panel(
         draw,
         split_x=SPLIT_X,
