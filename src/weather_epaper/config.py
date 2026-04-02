@@ -50,6 +50,13 @@ def _weather_poll_seconds() -> int:
     return _env_int("WEATHER_EPAPER_REFRESH_SEC", 600)
 
 
+# Waveshare 2.7" HAT keys (BCM); verify against your board wiki if buttons misbehave.
+_DEFAULT_KEY1_BCM = 5
+_DEFAULT_KEY2_BCM = 6
+_DEFAULT_KEY3_BCM = 13
+_DEFAULT_KEY4_BCM = 19
+
+
 @dataclass(frozen=True)
 class Settings:
     latitude: float
@@ -60,6 +67,10 @@ class Settings:
     weather_history_path: str
     mock: bool
     display_tz: dt.tzinfo
+    key1_bcm: int
+    key2_bcm: int
+    key3_bcm: int
+    key4_bcm: int
 
     @classmethod
     def from_environ(cls, mock: bool) -> Settings:
@@ -76,6 +87,10 @@ class Settings:
             ),
             mock=mock,
             display_tz=resolve_display_tz(tz_opt),
+            key1_bcm=_env_int("WEATHER_EPAPER_KEY1_BCM", _DEFAULT_KEY1_BCM),
+            key2_bcm=_env_int("WEATHER_EPAPER_KEY2_BCM", _DEFAULT_KEY2_BCM),
+            key3_bcm=_env_int("WEATHER_EPAPER_KEY3_BCM", _DEFAULT_KEY3_BCM),
+            key4_bcm=_env_int("WEATHER_EPAPER_KEY4_BCM", _DEFAULT_KEY4_BCM),
         )
 
 

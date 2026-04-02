@@ -18,6 +18,12 @@ Environment=GPIOZERO_PIN_FACTORY=lgpio
 # WEATHER_EPAPER_REFRESH_SEC = Open-Meteo poll interval (default 600).
 # WEATHER_EPAPER_HISTORY_JSON = rounded weather snapshots, newest first, max 5 (default data/weather_history.json).
 # Environment=WEATHER_EPAPER_REFRESH_SEC=600
+# HAT keys (BCM): KEY1 prev, KEY2 next, KEY3 home, KEY4 (restart screen: arm then confirm reboot)
+# Defaults match common Waveshare 2.7" HAT: 5, 6, 13, 19
+# Environment=WEATHER_EPAPER_KEY1_BCM=5
+# Environment=WEATHER_EPAPER_KEY2_BCM=6
+# Environment=WEATHER_EPAPER_KEY3_BCM=13
+# Environment=WEATHER_EPAPER_KEY4_BCM=19
 ExecStart=/home/pi/ePaper_Raspi/scripts/run-service.sh
 Restart=on-failure
 RestartSec=10

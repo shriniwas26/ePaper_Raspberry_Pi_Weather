@@ -71,5 +71,5 @@ warn_unused_configs = true
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["waveshare.*", "fonticon_mdi6.*"]
+module = ["waveshare.*", "fonticon_mdi6.*", "gpiozero.*"]
 ignore_missing_imports = true

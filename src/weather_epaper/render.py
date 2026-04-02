@@ -55,6 +55,11 @@ def _load_font(size: int, bold: bool = True) -> Font:
     return ImageFont.load_default()
 
 
+def ui_font(size: int, bold: bool = True) -> Font:
+    """Bundled font for simple UI screens (system menu, restart prompt)."""
+    return _load_font(size, bold=bold)
+
+
 def _text_width(draw: ImageDraw.ImageDraw, text: str, font: Font) -> int:
     b = draw.textbbox((0, 0), text, font=font)
     return int(b[2] - b[0])

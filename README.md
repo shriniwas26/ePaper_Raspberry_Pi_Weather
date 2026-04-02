@@ -11,14 +11,42 @@ Weather station for a Waveshare 2.7" e-paper display on a Raspberry Pi. Shows te
 
 ## Features
 
-- Temperature in Celsius and Fahrenheit
-- Real-time clock updated on the minute
-- Bottom bar with feels-like, humidity, wind speed, and last-updated time
+- Temperature in Celsius and Fahrenheit, clock with seconds, date, bottom bar (feels-like, humidity, wind, last update)
 - Weather data from [Open-Meteo](https://open-meteo.com/) (no API key required)
-- Threaded architecture: weather fetching and display rendering run independently
+- **Multi-screen UI** via the HAT’s four buttons (B/W only; no 4-gray)
+- **Screens:** Weather (default), System (hostname, app version, load average), Restart (two-step reboot confirm)
 - Automatic retry on API failure (3 attempts, 10s timeout)
-- JSON history of the last 48 weather readings
-- Graceful crash recovery (weather thread auto-restarts)
+- JSON weather history
+- Partial refresh for second ticks; periodic full refresh to limit ghosting
+
+## HAT keys (default BCM GPIO)
+
+Verify pinout on [Waveshare’s wiki](https://www.waveshare.com/wiki/2.7inch_e-Paper_HAT) if keys do not respond; override with environment variables.
+
+| Key | GPIO (default) | Action |
+|-----|----------------|--------|
+| KEY1 | 5 | Previous screen |
+| KEY2 | 6 | Next screen |
+| KEY3 | 13 | Home (Weather screen) |
+| KEY4 | 19 | On **Restart** screen: first press arms reboot, second press runs `systemctl reboot`. Else no-op. |
+
+Leaving the Restart screen with KEY1/KEY2/KEY3 cancels an armed reboot.
+
+## Reboot from the Restart screen
+
+The app runs `sudo -n systemctl reboot`. The `pi` user must be allowed to run that without a password, for example:
+
+```bash
+sudo visudo -f /etc/sudoers.d/weatherepaper-reboot
+```
+
+Add (replace `pi` if your service user differs):
+
+```
+pi ALL=(root) NOPASSWD: /bin/systemctl reboot
+```
+
+Save with mode `0440`. If sudo is not configured, the app logs an error and the Pi does not reboot.
 
 ## Quick Start
 
@@ -29,6 +57,8 @@ uv sync
 # Run with mock display (outputs PNG instead of driving hardware)
 WEATHER_EPAPER_MOCK=1 uv run python -m weather_epaper.main --mock --once
 ```
+
+On the Pi, use `uv sync --extra pi` (see `scripts/run-service.sh`) so **gpiozero** is available for the keys.
 
 ## Deploy to Raspberry Pi
 
@@ -49,20 +79,29 @@ All settings are via environment variables (set in `deploy/weather-epaper.servic
 | `WEATHER_EPAPER_REFRESH_SEC` | `600` | Weather fetch interval (seconds) |
 | `WEATHER_EPAPER_HISTORY_JSON` | `data/weather_history.json` | Path to history file |
 | `WEATHER_EPAPER_MOCK` | unset | Set to `1` to write PNG instead of driving e-paper |
+| `WEATHER_EPAPER_KEY1_BCM` … `KEY4_BCM` | `5`, `6`, `13`, `19` | HAT button GPIO numbers (BCM) |
 
 ## Project Structure
 
 ```
 src/weather_epaper/
-  main.py            # Entry point, threading, display loop
-  render.py          # PIL image generation for the e-paper layout
-  device.py          # Hardware abstraction (real e-paper / mock PNG)
-  config.py          # Settings from environment variables
-  weather_client.py  # Open-Meteo API client with retry
-  weather_history.py # JSON persistence for weather readings
-  icons.py           # MDI icon glyph constants
-fonts/               # Bundled TTF fonts (Roboto Bold)
-third_party/waveshare/  # Vendored Waveshare driver
-scripts/             # Deploy and service management scripts
-deploy/              # systemd unit file
+  main.py            # Main loop, weather fetch, keys, display
+  render.py          # Weather panel PIL layout
+  device.py          # E-paper / mock PNG
+  config.py          # Settings from environment
+  input_hat.py       # gpiozero HAT buttons → event queue
+  ui/
+    screens.py       # ScreenId, RenderContext, per-screen rendering
+    navigation.py    # ScreenManager, reboot confirm
+  weather_client.py  # Open-Meteo client
+  weather_history.py # JSON history
+  icons.py           # MDI glyphs
+fonts/               # Bundled Roboto fonts
+third_party/waveshare/
+scripts/
+deploy/
 ```
+
+## Future ideas
+
+- Optional **History** screen (scroll recent JSON snapshots) was deferred; the data file is already populated.
